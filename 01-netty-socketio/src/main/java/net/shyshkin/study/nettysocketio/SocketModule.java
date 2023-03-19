@@ -28,14 +28,15 @@ public class SocketModule {
     private DataListener<Message> onChatReceived() {
         return (senderClient, data, ackSender) -> {
             log.info(data.toString());
-            socketService.sendMessage(data.getRoom(),"get_message", senderClient, data.getMessage());
+            socketService.sendMessage(data.getRoom(), "get_message", senderClient, data.getMessage());
         };
     }
 
     private ConnectListener onConnected() {
         return (client) -> {
             String room = client.getHandshakeData().getSingleUrlParam("room");
-            client.joinRoom(room);
+            if (room != null)
+                client.joinRoom(room);
             log.info("Socket ID[{}]  Connected to socket", client.getSessionId().toString());
         };
     }
