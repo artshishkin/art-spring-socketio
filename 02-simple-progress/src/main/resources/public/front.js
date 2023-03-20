@@ -14,3 +14,16 @@ socket.on('progress', (progress) => {
         .empty()
         .html(`Totally done ${currentTask} of ${totalTasks} tasks [${percent}%]`);
 })
+
+let source = new EventSource("http://localhost:8080/progress");
+source.onmessage = function (event) {
+
+    const {currentTask, totalTasks} = JSON.parse(event.data);
+    const percent = Math.floor(1000 * currentTask / totalTasks) / 10;
+
+    $('#progress-sse')
+        .empty()
+        .html(`Totally done ${currentTask} of ${totalTasks} tasks [${percent}%] (using SSE)`);
+    document.getElementById("progress-sse-js")
+        .innerHTML = `Totally done ${currentTask} of ${totalTasks} tasks [${percent}%] (using SSE in plain JS)`;
+};

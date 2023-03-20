@@ -26,7 +26,7 @@ public class AppRunner implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
 
-        long totalTasks = 15;
+        long totalTasks = 300;
 
         progressBroadcast
                 .subscribe(socketService::sendProgress);
