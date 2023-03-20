@@ -20,5 +20,5 @@ $('.msg-form')
 
 socket.on('get_message', (data) => {
     $('.chat-messages')
-        .append(`<li class="chat-message">${data.message}</li>`);
+        .append(`<li class="list-group-item">${data.message}</li>`);
 })
