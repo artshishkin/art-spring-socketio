@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.shyshkin.study.nettysocketio.SocketService;
 import net.shyshkin.study.nettysocketio.model.Progress;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
@@ -16,16 +18,17 @@ import java.time.Duration;
 public class AppRunner implements CommandLineRunner {
 
     private final SocketService socketService;
+    private final ApplicationContext context;
 
     @Override
     public void run(String... args) throws Exception {
 
-        long totalTasks = 300;
+        long totalTasks = 15;
 
         Long taskCount = Flux.interval(Duration.ofSeconds(1))
                 .take(totalTasks)
                 .map(i -> Progress.builder()
-                        .currentTask(i)
+                        .currentTask(i + 1)
                         .totalTasks(totalTasks)
                         .build())
                 .doOnNext(socketService::sendProgress)
@@ -34,6 +37,9 @@ public class AppRunner implements CommandLineRunner {
                 .block();
 
         log.info("Totally done {} tasks", taskCount);
+
+        //Exit on finish work
+        SpringApplication.exit(context);
     }
 
 
