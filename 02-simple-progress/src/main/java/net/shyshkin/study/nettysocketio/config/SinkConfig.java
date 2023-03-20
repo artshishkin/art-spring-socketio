@@ -15,7 +15,7 @@ public class SinkConfig {
     }
 
     @Bean
-    public Flux<Progress> productBroadcast() {
+    public Flux<Progress> progressBroadcast() {
         return sink().asFlux();
     }
 

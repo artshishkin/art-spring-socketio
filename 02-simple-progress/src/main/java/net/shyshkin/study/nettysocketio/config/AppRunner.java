@@ -21,11 +21,15 @@ public class AppRunner implements CommandLineRunner {
     private final SocketService socketService;
     private final ApplicationContext context;
     private final Sinks.Many<Progress> progressSink;
+    private final Flux<Progress> progressBroadcast;
 
     @Override
     public void run(String... args) throws Exception {
 
         long totalTasks = 15;
+
+        progressBroadcast
+                .subscribe(socketService::sendProgress);
 
         Long taskCount = Flux.interval(Duration.ofSeconds(1))
                 .take(totalTasks)
@@ -33,7 +37,6 @@ public class AppRunner implements CommandLineRunner {
                         .currentTask(i + 1)
                         .totalTasks(totalTasks)
                         .build())
-                .doOnNext(socketService::sendProgress)
                 .doOnNext(progressSink::tryEmitNext)
                 .doOnNext(progress -> log.info("Currently done {} of {}", progress.getCurrentTask(), progress.getTotalTasks()))
                 .count()
