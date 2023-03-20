@@ -9,6 +9,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Sinks;
 
 import java.time.Duration;
 
@@ -19,6 +20,7 @@ public class AppRunner implements CommandLineRunner {
 
     private final SocketService socketService;
     private final ApplicationContext context;
+    private final Sinks.Many<Progress> progressSink;
 
     @Override
     public void run(String... args) throws Exception {
@@ -32,6 +34,7 @@ public class AppRunner implements CommandLineRunner {
                         .totalTasks(totalTasks)
                         .build())
                 .doOnNext(socketService::sendProgress)
+                .doOnNext(progressSink::tryEmitNext)
                 .doOnNext(progress -> log.info("Currently done {} of {}", progress.getCurrentTask(), progress.getTotalTasks()))
                 .count()
                 .block();
