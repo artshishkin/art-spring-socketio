@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.shyshkin.study.nettysocketio.model.Message;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Component
@@ -28,14 +29,14 @@ public class SocketModule {
     private DataListener<Message> onChatReceived() {
         return (senderClient, data, ackSender) -> {
             log.info(data.toString());
-            socketService.sendMessage(data.getRoom(), "get_message", senderClient, data.getMessage());
+            socketService.sendMessageToAll("get_message", senderClient, data.getMessage());
         };
     }
 
     private ConnectListener onConnected() {
         return (client) -> {
             String room = client.getHandshakeData().getSingleUrlParam("room");
-            if (room != null)
+            if (StringUtils.hasText(room))
                 client.joinRoom(room);
             log.info("Socket ID[{}]  Connected to socket", client.getSessionId().toString());
         };

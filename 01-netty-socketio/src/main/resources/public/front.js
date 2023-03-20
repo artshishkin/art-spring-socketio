@@ -14,10 +14,11 @@ $('.msg-form')
         socket.emit('send_message', {
             message: msg,
             type: 'CLIENT',
-            room: '/'
+            room: ''
         });
     })
 
 socket.on('get_message', (data) => {
-    console.log(data)
+    $('.chat-messages')
+        .append(`<li class="chat-message">${data.message}</li>`);
 })
