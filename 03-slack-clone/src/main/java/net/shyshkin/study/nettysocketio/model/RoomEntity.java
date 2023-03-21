@@ -20,9 +20,9 @@ public class RoomEntity {
     @Builder.Default
     private boolean privateRoom = false;
 
-    private final List<String> history = new ArrayList<>();
+    private final List<MessageEntity> history = new ArrayList<>();
 
-    public RoomEntity addMessage(String message) {
+    public RoomEntity addMessage(MessageEntity message) {
         this.history.add(message);
         return this;
     }
