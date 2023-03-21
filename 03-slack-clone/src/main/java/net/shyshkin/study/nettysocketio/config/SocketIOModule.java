@@ -7,6 +7,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.shyshkin.study.nettysocketio.repository.NamespaceEntityRepository;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Component;
 public class SocketIOModule {
 
     private final SocketIOServer server;
+    private final NamespaceEntityRepository repository;
 
     @PostConstruct
     void init() {
@@ -31,6 +33,9 @@ public class SocketIOModule {
     private ConnectListener onConnected() {
         return (client) -> {
             log.debug("Socket ID[{}]  Connected to socket", client.getSessionId().toString());
+            //send the ns data back to the client
+            //socket.emit('nsList', namespaces);
+            client.sendEvent("nsList", repository.getAllNamespaces());
         };
     }
 
