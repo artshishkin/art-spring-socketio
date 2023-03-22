@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.HashSet;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 @Data
@@ -23,6 +25,12 @@ public class NamespaceEntity {
     public NamespaceEntity addRoom(RoomEntity room) {
         this.rooms.add(room);
         return this;
+    }
+
+    public Optional<RoomEntity> getRoom(String roomName) {
+        return rooms.stream()
+                .filter(room -> Objects.equals(room.getRoomTitle(), roomName))
+                .findAny();
     }
 
 }

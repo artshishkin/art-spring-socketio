@@ -1,5 +1,7 @@
 package net.shyshkin.study.nettysocketio.config;
 
+import com.corundumstudio.socketio.SocketIOClient;
+import com.corundumstudio.socketio.SocketIONamespace;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.corundumstudio.socketio.listener.ConnectListener;
 import com.corundumstudio.socketio.listener.DisconnectListener;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Date;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 @Slf4j
@@ -32,54 +35,64 @@ public class SocketIOModule {
 
         repository.getAllNamespaces().forEach(ns -> {
 
-            server.addNamespace(ns.getEndpoint())
-                    .addConnectListener(nsSocket -> {
-                        log.debug("Server received a connection to namespace {} from socket {}", ns.getEndpoint(), nsSocket.getSessionId());
-                        String username = nsSocket.getHandshakeData()
-                                .getSingleUrlParam("username");
-                        nsSocket.sendEvent("nsRoomLoad", ns.getRooms());
-                        nsSocket.getNamespace().addEventListener("joinRoom", String.class, (client, roomToJoin, ackSender) -> {
+            SocketIONamespace socketIONamespace = server.addNamespace(ns.getEndpoint());
+            socketIONamespace.addConnectListener(nsSocket -> {
+                log.debug("Server received a connection to namespace {} from socket {}", ns.getEndpoint(), nsSocket.getSessionId());
+                nsSocket.sendEvent("nsRoomLoad", ns.getRooms());
+            });
 
-                            RoomEntity joinRoomEntity = ns.getRooms()
-                                    .stream()
-                                    .filter(room -> Objects.equals(room.getRoomTitle(), roomToJoin))
-                                    .findFirst()
-                                    .orElseThrow(() -> new RuntimeException("Room " + roomToJoin + " not found"));
+            socketIONamespace.addEventListener("joinRoom", String.class, (client, roomToJoin, ackSender) -> {
 
-                            client.joinRoom(roomToJoin);
-                            int clientsCountInRoom = client.getNamespace()
-                                    .getRoomOperations(roomToJoin)
-                                    .getClients()
-                                    .size();
+                RoomEntity joinRoomEntity = ns.getRooms()
+                        .stream()
+                        .filter(room -> Objects.equals(room.getRoomTitle(), roomToJoin))
+                        .findFirst()
+                        .orElseThrow(() -> new RuntimeException("Room " + roomToJoin + " not found"));
 
-                            String returnMsg = "You joined the room " + roomToJoin;
-                            var history = joinRoomEntity.getHistory();
+                //leave previous room
+                findFirstRoom(client)
+                        .ifPresent(client::leaveRoom);
 
-                            //analog JS callback
-                            ackSender.sendAckData(clientsCountInRoom, returnMsg, history);
+                client.joinRoom(roomToJoin);
+                int clientsCountInRoom = client.getNamespace()
+                        .getRoomOperations(roomToJoin)
+                        .getClients()
+                        .size();
 
-                            Set<String> allRooms = client.getAllRooms();
-                            log.debug("client {} is joined to rooms: {}", client.getSessionId(), allRooms);
+                String returnMsg = "You joined the room " + roomToJoin;
+                var history = joinRoomEntity.getHistory();
 
-                            client.getNamespace().addEventListener("messageToServer", MessageToServer.class, (client1, msg, ackSender1) -> {
-                                MessageEntity fullMsg = MessageEntity.builder()
-                                        .text(msg.getText())
-                                        .username(username)
-                                        .time(new Date().getTime())
-                                        .avatar(String.format("https://robohash.org/%s?set=set1&size=30x30", username))
-                                        .build();
-                                joinRoomEntity.addMessage(fullMsg);
-                                client1.getNamespace().getRoomOperations(roomToJoin)
-                                        .sendEvent("messageToClients", fullMsg);
-                            });
+                //analog JS callback
+                ackSender.sendAckData(clientsCountInRoom, returnMsg, history);
 
-                        });
+                Set<String> allRooms = client.getAllRooms();
+                log.debug("client {} is joined to rooms: {}", client.getSessionId(), allRooms);
+            });
 
+            socketIONamespace.addEventListener("messageToServer", MessageToServer.class, (client, msg, ackSender1) -> {
+                String username = client.getHandshakeData()
+                        .getSingleUrlParam("username");
 
-                    });
+                //find room to emit the message - room0 - ns, room1 - first room
+                String roomName = findFirstRoom(client)
+                        .orElseThrow(() -> new RuntimeException("Client did not join any room"));
 
+                MessageEntity fullMsg = MessageEntity.builder()
+                        .text(msg.getText())
+                        .username(username)
+                        .time(new Date().getTime())
+                        .avatar(String.format("https://robohash.org/%s?set=set1&size=30x30", username))
+                        .build();
+
+                ns.getRoom(roomName)
+                        .ifPresent(roomEntity -> roomEntity.addMessage(fullMsg));
+
+                client.getNamespace().getRoomOperations(roomName)
+                        .sendEvent("messageToClients", fullMsg);
+            });
 
         });
+
 
         server.start();
     }
@@ -102,6 +115,14 @@ public class SocketIOModule {
         return client -> {
             log.debug("Client[{}] - Disconnected from socket", client.getSessionId().toString());
         };
+    }
+
+    private Optional<String> findFirstRoom(SocketIOClient client) {
+        String nsName = client.getNamespace().getName();
+        return client.getAllRooms()
+                .stream()
+                .filter(room -> !room.equals(nsName))
+                .findAny();
     }
 
 }
